@@ -19,6 +19,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-      - run: aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 492107414874.dkr.ecr.us-east-1.amazonaws.com
-      - run: docker build -t test .
-      - run: docker image ls
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: test
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Logout of Amazon ECR
+        if: always()
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}
